@@ -1,18 +1,23 @@
 ﻿<?php
-	$strPreco 	= "	<ul>
+	$strPreco   = "    <ul>
 						<li>Remplacer les caractères spéciaux</li>
 						<li>Traiter la saisie utilisateur en fonction de ce qui est demandé :<br>
 						IP donc 4 <u>nombres</u> entre 0 et 255, séparés par des .</li>
 					</ul>";
-	$strDesc	= "L'injection de commande est une attaque informatique qui consiste à insérer des commandes malveillantes dans des entrées utilisateur ou des données qui seront ensuite exécutées par un système informatique. Cette attaque est souvent utilisée pour prendre le contrôle d'un système informatique à distance.";
-	$strTip		= "Utiliser le séparateur & ou && ou ; selon le système d'exploitation";
+	$strDesc    = "L'injection de commande est une attaque informatique qui consiste à insérer des commandes malveillantes dans des entrées utilisateur ou des données qui seront ensuite exécutées par un système informatique. Cette attaque est souvent utilisée pour prendre le contrôle d'un système informatique à distance.";
+	$strTip     = "Utiliser le séparateur & ou && ou ; selon le système d'exploitation";
 ?>
 
 <div class="col-md-8">
 	<h2>Injection de commande </h2>
 	<?php
-		include("_partial/desc.php");
-	?>	
+		use _partial\desc;
+
+		// If desc.php defines a class, instantiate or use it as needed, for example:
+		// $desc = new desc();
+		// echo $desc->render();
+	?>
+
 	<div class="py-4">
 		<form name="ping" action="#" method="post">
 			<p>
@@ -43,7 +48,8 @@
 		echo "<pre>".$cmd."</pre>";
 	}
 	
-	include ("_partial/soluce.php"); 	
+	use _partial\soluce;
+	// The class soluce is now imported via the use statement. Ensure autoloading is configured.
 ?>
 	
 </div>

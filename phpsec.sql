@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS `comments` (
 
 INSERT INTO `comments` (`id`, `name`, `comment`, `publish`) VALUES
 (1, 'Christel', 'Mon premier commentaire', 1);
+(2, 'Seb', 'Un autre commentaire', 1);
+(3, 'Alice', 'Commentaire d\'Alice', 1);
+(4, 'Bob', 'Commentaire de Bob', 0);
+(5, 'Charlie', 'Commentaire de Charlie', 1);
+(6, 'Dave', 'Commentaire de Dave', 0);
+(7, 'Eve', 'Commentaire de Eve', 1);
 
 -- --------------------------------------------------------
 
@@ -65,6 +71,11 @@ CREATE TABLE IF NOT EXISTS `users` (
 INSERT INTO `users` (`id`, `login`, `password`, `name`) VALUES
 (1, 'admin', 'password', 'Christel'),
 (2, 'toto', 'camion', 'Seb');
+(3, 'user', 'userpass', 'User');
+(4, 'alice', 'wonderland', 'Alice');
+(5, 'bob', 'builder', 'Bob');
+(6, 'charlie', 'chocolate', 'Charlie');
+(7, 'dave', 'david123', 'Dave');
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
