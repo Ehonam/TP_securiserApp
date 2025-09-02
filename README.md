@@ -1,6 +1,6 @@
 # Rapport des Améliorations Sécuritaires
 
-## Résumé des vulnérabilités corrigées
+## Résumé des vulnérabilités 
 
 Cette application a été sécurisée selon les recommandations du TP "Sécuriser une application". Toutes les vulnérabilités identifiées ont été corrigées.
 
@@ -36,7 +36,7 @@ Cette application a été sécurisée selon les recommandations du TP "Sécurise
 - Données sensibles hors du contrôle de version
 - Flexibilité pour différents environnements
 
-## 3. Injection de commandes - CORRIGÉE
+## 3. Injection de commandes 
 
 ### Vulnérabilité originale :
 ```php
@@ -49,7 +49,7 @@ $cmd = shell_exec( 'ping ' . $target );
 - Échappement de la sortie avec `htmlspecialchars()`
 - Messages d'erreur informatifs
 
-## 4. Cross-Site Scripting (XSS) - CORRIGÉ
+## 4. Cross-Site Scripting (XSS) 
 
 ### Vulnérabilités originales :
 - Sortie non échappée dans les commentaires
@@ -61,7 +61,7 @@ $cmd = shell_exec( 'ping ' . $target );
 - Validation et nettoyage des entrées utilisateur
 - Traçabilité des commentaires (IP, User-Agent)
 
-## 5. CSRF (Cross-Site Request Forgery) - CORRIGÉ
+## 5. CSRF (Cross-Site Request Forgery) 
 
 ### Vulnérabilité originale :
 - Formulaire en GET sans protection
@@ -75,7 +75,7 @@ $cmd = shell_exec( 'ping ' . $target );
 - Demande du mot de passe actuel pour validation
 - Hachage des mots de passe avec `password_hash()`
 
-## 6. Authentification et Force Brute - CORRIGÉE
+## 6. Authentification et Force Brute 
 
 ### Vulnérabilités originales :
 - Pas de limitation des tentatives
@@ -105,7 +105,7 @@ $query = "SELECT * FROM users WHERE login = '{$username}' AND password = '{$pass
 - Validation des entrées utilisateur
 - Gestion d'erreurs sécurisée
 
-## 8. Téléchargement de fichiers - SÉCURISÉ
+## 8. Téléchargement de fichiers 
 
 ### Vulnérabilités originales :
 - Aucune validation des fichiers
