@@ -1,74 +1,139 @@
-<?php
-// pages/login.php - SÉCURISÉ contre Brute Force
-require_once __DIR__ . '/../includes/security.php';
+<?php 
+/**
+ * Secure Authentication System
+ * 
+ * SECURE VERSION: Uses prepared statements and brute force protection
+ */
 
-$error = '';
+include("connect.php");
+require_once __DIR__ . '/../auth_security.php';
+require_once __DIR__ . '/../csrf_protection.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!Security::validateCSRFToken($_POST['csrf_token'] ?? '')) {
-        $error = "Token de sécurité invalide";
+$arrUser = false;
+$loginError = '';
+$loginSuccess = false;
+$remainingLockout = 0;
+
+// Initialize auth security
+$authSecurity = new AuthSecurity($db);
+$userIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+// Check if IP is currently locked
+$remainingLockout = $authSecurity->getRemainingLockoutTime($userIp);
+
+// Process login attempt (POST only for security)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
+    // Validate CSRF token
+    if (!CSRFProtection::validateFromData($_POST)) {
+        $loginError = 'Erreur de sécurité: Token CSRF invalide.';
     } else {
-        $login = Security::cleanInput($_POST['username'] ?? '');
+        $username = trim($_POST['username']);
         $password = $_POST['password'] ?? '';
         
-        if (empty($login) || empty($password)) {
-            $error = "Tous les champs obligatoires";
+        // Attempt authentication with security checks
+        $authResult = $authSecurity->authenticate($username, $password, $userIp);
+        
+        if ($authResult['success']) {
+            $arrUser = $authResult['user'];
+            $loginSuccess = true;
+            
+            // Start secure session
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $_SESSION['user_id'] = $arrUser['id'];
+            $_SESSION['username'] = $arrUser['login'];
+            $_SESSION['login_time'] = time();
         } else {
-            // ✅ VÉRIFIER TENTATIVES BRUTE FORCE
-            if (!Security::checkLoginAttempts($login)) {
-                $error = "Trop de tentatives. Réessayez dans 15 minutes.";
-            } else {
-                // ✅ REQUÊTE PRÉPARÉE (anti-injection SQL)
-                $stmt = $db->prepare("SELECT id, login, password, name, active, failed_attempts, locked_until FROM users WHERE login = ? AND active = 1");
-                $stmt->execute([$login]);
-                $user = $stmt->fetch();
-                
-                if ($user && password_verify($password, $user['password'])) {
-                    // ✅ CONNEXION RÉUSSIE
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['user_login'] = $user['login'];
-                    $_SESSION['user_name'] = $user['name'];
-                    $_SESSION['login_time'] = time();
-                    
-                    // Réinitialiser compteurs
-                    Security::clearLoginAttempts($login);
-                    $stmt = $db->prepare("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?");
-                    $stmt->execute([$user['id']]);
-                    
-                    header("Location: index.php?page=profile");
-                    exit();
-                } else {
-                    // ✅ CONNEXION ÉCHOUÉE - Logger
-                    $error = "Identifiants incorrects";
-                    Security::logFailedLogin($login);
-                    
-                    if ($user) {
-                        $newFailedAttempts = $user['failed_attempts'] + 1;
-                        $lockUntil = null;
-                        
-                        // ✅ VERROUILLAGE APRÈS 5 TENTATIVES
-                        if ($newFailedAttempts >= 5) {
-                            $lockUntil = date('Y-m-d H:i:s', time() + 900); // 15 min
-                        }
-                        
-                        $stmt = $db->prepare("UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?");
-                        $stmt->execute([$newFailedAttempts, $lockUntil, $user['id']]);
-                    }
-                }
+            $loginError = $authResult['error'];
+            if (isset($authResult['lockout_time'])) {
+                $remainingLockout = $authSecurity->getRemainingLockoutTime($userIp);
             }
         }
     }
-    
-    // ✅ DÉLAI ANTI-BRUTE FORCE
-    sleep(1);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['username'])) {
+    // For backward compatibility, but show warning
+    $loginError = 'Utilisez le formulaire sécurisé ci-dessous pour vous connecter.';
+}
+
+// Clean old login attempts periodically (1% chance)
+if (rand(1, 100) === 1) {
+    $authSecurity->cleanOldLoginAttempts();
 }
 ?>
+<div class="py-4">
+	<?php if (!empty($loginError)): ?>
+		<div class="alert alert-danger" role="alert">
+			<?php echo htmlspecialchars($loginError, ENT_QUOTES, 'UTF-8'); ?>
+		</div>
+	<?php endif; ?>
+	
+	<?php if ($remainingLockout > 0): ?>
+		<div class="alert alert-warning" role="alert">
+			<strong>Compte temporairement bloqué</strong><br>
+			Trop de tentatives de connexion échouées. Veuillez attendre 
+			<span id="countdown"><?php echo $remainingLockout; ?></span> secondes.
+		</div>
+		<script>
+		let countdown = <?php echo $remainingLockout; ?>;
+		const countdownEl = document.getElementById('countdown');
+		const timer = setInterval(() => {
+			countdown--;
+			countdownEl.textContent = countdown;
+			if (countdown <= 0) {
+				clearInterval(timer);
+				location.reload();
+			}
+		}, 1000);
+		</script>
+	<?php else: ?>
+		<form method="POST" action="#">
+			<input type="hidden" name="page" value="<?php echo htmlspecialchars($strPage, ENT_QUOTES, 'UTF-8'); ?>">
+			<?php echo CSRFProtection::getTokenField(); ?>
+			
+			<div class="mb-3">
+				<label for="username" class="form-label">Nom d'utilisateur:</label>
+				<input class="form-control" 
+				       type="text" 
+				       id="username"
+				       name="username" 
+				       required
+				       autocomplete="username"
+				       value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+			</div>
+			
+			<div class="mb-3">
+				<label for="password" class="form-label">Mot de passe:</label>
+				<input class="form-control" 
+				       type="password" 
+				       id="password"
+				       name="password"
+				       required
+				       autocomplete="current-password">
+				<small class="form-text text-muted">Utilisez un mot de passe fort (8+ caractères)</small>
+			</div>
+			
+			<button type="submit" class="btn btn-primary" name="login">Se connecter</button>
+		</form>
+	<?php endif; ?>
+</div>
 
-<form method="POST" autocomplete="off">
-    <input type="hidden" name="csrf_token" value="<?= Security::generateCSRFToken() ?>">
-    <label>Username:</label>
-    <input type="text" name="username" required autocomplete="username">
-    <label>Password:</label>
-    <input type="password" name="password" required autocomplete="current-password">
-    <button type="submit">Se connecter</button>
-</form>
+<?php if ($loginSuccess && $arrUser): ?>
+	<div class="alert alert-success" role="alert">
+		<h4>Connexion réussie!</h4>
+		<p>Bienvenue <?php echo htmlspecialchars($arrUser['name'], ENT_QUOTES, 'UTF-8'); ?>!</p>
+		<p><small class="text-muted">Session sécurisée établie.</small></p>
+		
+		<?php if ($strPage === "csrf"): ?>
+			<small class="text-muted">Accès autorisé pour la démonstration CSRF.</small>
+		<?php endif; ?>
+	</div>
+<?php elseif (!empty($loginError)): ?>
+	<div class="alert alert-danger" role="alert">
+		<strong>Échec de la connexion</strong><br>
+		<?php echo htmlspecialchars($loginError, ENT_QUOTES, 'UTF-8'); ?>
+		<?php if ($remainingLockout > 0): ?>
+			<br><small>Compte bloqué pour <?php echo $remainingLockout; ?> secondes.</small>
+		<?php endif; ?>
+	</div>
+<?php endif; ?>

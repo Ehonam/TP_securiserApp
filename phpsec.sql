@@ -2,7 +2,7 @@
 -- version 5.2.0
 -- https://www.phpmyadmin.net/
 --
--- Hôte : 127.0.0.1:3306
+-- Hôte : 127.0.0.1:3307
 -- Généré le : lun. 01 sep. 2025 à 06:52
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.3.8
@@ -24,6 +24,45 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Structure de la table `login_attempts`
+--
+
+DROP TABLE IF EXISTS `login_attempts`;
+CREATE TABLE IF NOT EXISTS `login_attempts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `ip_address` varchar(45) NOT NULL,
+  `login_attempt` varchar(255) NOT NULL,
+  `success` tinyint(1) NOT NULL DEFAULT '0',
+  `user_agent` varchar(500) DEFAULT NULL,
+  `attempted_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_ip_time` (`ip_address`, `attempted_at`),
+  INDEX `idx_success` (`success`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `csrf_tokens`
+--
+
+DROP TABLE IF EXISTS `csrf_tokens`;
+CREATE TABLE IF NOT EXISTS `csrf_tokens` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `token` varchar(64) NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `session_id` varchar(128) NOT NULL,
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` timestamp NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_token` (`token`),
+  INDEX `idx_session_token` (`session_id`, `token`),
+  INDEX `idx_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `comments`
 --
 
@@ -33,8 +72,14 @@ CREATE TABLE IF NOT EXISTS `comments` (
   `name` varchar(255) NOT NULL,
   `comment` text NOT NULL,
   `publish` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb3;
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` varchar(500) DEFAULT NULL,
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_publish` (`publish`),
+  INDEX `idx_created_at` (`created_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Déchargement des données de la table `comments`
@@ -42,12 +87,6 @@ CREATE TABLE IF NOT EXISTS `comments` (
 
 INSERT INTO `comments` (`id`, `name`, `comment`, `publish`) VALUES
 (1, 'Christel', 'Mon premier commentaire', 1);
-(2, 'Seb', 'Un autre commentaire', 1);
-(3, 'Alice', 'Commentaire d\'Alice', 1);
-(4, 'Bob', 'Commentaire de Bob', 0);
-(5, 'Charlie', 'Commentaire de Charlie', 1);
-(6, 'Dave', 'Commentaire de Dave', 0);
-(7, 'Eve', 'Commentaire de Eve', 1);
 
 -- --------------------------------------------------------
 
@@ -58,24 +97,28 @@ INSERT INTO `comments` (`id`, `name`, `comment`, `publish`) VALUES
 DROP TABLE IF EXISTS `users`;
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `login` varchar(255) NOT NULL,
+  `login` varchar(255) NOT NULL UNIQUE,
   `password` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3;
+  `email` varchar(255) DEFAULT NULL,
+  `failed_login_attempts` int DEFAULT 0,
+  `last_failed_login` timestamp NULL DEFAULT NULL,
+  `account_locked_until` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_login` (`login`),
+  INDEX `idx_failed_attempts` (`failed_login_attempts`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Déchargement des données de la table `users`
 --
 
-INSERT INTO `users` (`id`, `login`, `password`, `name`) VALUES
-(1, 'admin', 'password', 'Christel'),
-(2, 'toto', 'camion', 'Seb');
-(3, 'user', 'userpass', 'User');
-(4, 'alice', 'wonderland', 'Alice');
-(5, 'bob', 'builder', 'Bob');
-(6, 'charlie', 'chocolate', 'Charlie');
-(7, 'dave', 'david123', 'Dave');
+-- Note: Passwords should be hashed with password_hash() in production
+INSERT INTO `users` (`id`, `login`, `password`, `name`, `email`) VALUES
+(1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Christel', 'admin@example.com'),
+(2, 'toto', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Seb', 'seb@example.com'),
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

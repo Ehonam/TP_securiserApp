@@ -1,33 +1,51 @@
 <?php
-require_once __DIR__ . '/config/config.php';
-if (session_status() === PHP_SESSION_NONE) {
-    if (defined('SESSION_NAME') && SESSION_NAME) {
-        session_name(SESSION_NAME);
-    }
-    session_start();
-}
-require_once __DIR__ . '/includes/security.php';
-require_once __DIR__ . '/connect.php';
-// Liste blanche des pages autorisées
-$allowedPages = array_map(function($file) {
-    return basename($file, '.php');
-}, glob(__DIR__ . '/pages/*.php'));
+/**
+ * Security Training Application - Main Entry Point
+ * 
+ * EDUCATIONAL NOTE: This application intentionally contains security
+ * vulnerabilities for training purposes. Do not use in production!
+ */
 
-$strPage = $_GET['page'] ?? 'content';
-if (!in_array($strPage, $allowedPages)) {
-    $strPage = 'content';
+// Initialize application
+define('APP_INIT', true);
+session_start();
+
+// Load configuration
+require_once 'config.php';
+
+// Get requested page with input validation
+$requestedPage = $_GET['page'] ?? 'content';
+
+// SECURITY IMPROVEMENT: Use whitelist from config instead of file_exists check
+if (!in_array($requestedPage, $allowedPages)) {
+    $requestedPage = 'content'; // Default to safe page
 }
+
+// Final check that file exists
+if (!file_exists("pages/{$requestedPage}.php")) {
+    header("Location: index.php");
+    exit();
+}
+
+$strPage = $requestedPage;
+
+// Set vulnerability information for the current page
+$currentVulnerability = getVulnerabilityInfo($strPage);
 ?>
+
 <?php include ("_partial/head.php"); ?>
 
 <main class="container">
-    <?php include ("_partial/header.php"); ?>  
-    <!-- Content -->
-    <div class="row g-5 py-3">
-    <?php 
-        include ("_partial/col.php"); 
-        include ("pages/".$strPage.".php");
-    ?> 
-    </div>
+
+	<?php include ("_partial/header.php"); ?>  
+	<!-- Content -->
+	<div class="row g-5 py-3">
+	<?php 
+		include ("_partial/col.php"); 
+		include ("pages/".$strPage.".php");
+	?> 
+	</div>
+
 </main>
-<?php include_once "_partial/footer.php"; ?>
+
+<?php include ("_partial/footer.php"); ?>  
